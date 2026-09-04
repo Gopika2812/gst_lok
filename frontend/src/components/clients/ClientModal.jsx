@@ -212,11 +212,18 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
   };
 
   // Filter master services by search query and department tab
-  const filteredMasterServices = masterServices.filter((s) => {
+  const filteredMasterServices = (masterServices || []).filter((s) => {
+    if (!s) return false;
+    const q = (serviceSearchQuery || '').toLowerCase().trim();
+    const subName = (s.subServiceName || '').toLowerCase();
+    const sName = (s.serviceName || '').toLowerCase();
+    const dept = (s.department || '').toLowerCase();
+
     const matchesSearch =
-      s.subServiceName.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
-      s.serviceName.toLowerCase().includes(serviceSearchQuery.toLowerCase()) ||
-      s.department.toLowerCase().includes(serviceSearchQuery.toLowerCase());
+      !q ||
+      subName.includes(q) ||
+      sName.includes(q) ||
+      dept.includes(q);
 
     const matchesDept =
       serviceDeptTab === 'All' ||

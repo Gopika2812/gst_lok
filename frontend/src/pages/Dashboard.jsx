@@ -580,9 +580,9 @@ const Dashboard = () => {
                 const sameClient = String(t.client?._id || t.client) === String(client._id);
                 const sameMonth = taskDate.getMonth() === currentMonth && taskDate.getFullYear() === currentYear;
                 const sameService =
-                  (t.taskName && service.subServiceName && t.taskName.toLowerCase().includes(service.subServiceName.toLowerCase())) ||
-                  (service.subServiceName && t.taskName && service.subServiceName.toLowerCase().includes(t.taskName.toLowerCase())) ||
-                  (t.department === service.department);
+                  (t?.taskName && service?.subServiceName && t.taskName.toLowerCase().includes(service.subServiceName.toLowerCase())) ||
+                  (service?.subServiceName && t?.taskName && service.subServiceName.toLowerCase().includes(t.taskName.toLowerCase())) ||
+                  (t?.department && service?.department && t.department === service.department);
                 return sameClient && sameMonth && sameService && t.status === 'Completed';
               });
             };

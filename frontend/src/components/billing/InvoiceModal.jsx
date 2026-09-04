@@ -95,8 +95,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
   const handleBillingCycleChange = (cycle) => {
     setBillingCycle(cycle);
     setItems((prevItems) =>
-      prevItems.map((it) => {
-        let desc = it.description;
+      (prevItems || []).map((it) => {
+        let desc = it?.description || '';
         if (cycle === 'Yearly') {
           if (desc.toLowerCase().includes('monthly')) {
             desc = desc.replace(/monthly/i, 'Yearly / Annual');
@@ -157,11 +157,13 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
     }
   };
 
-  const filteredEmployees = localEmployees.filter((emp) => {
+  const filteredEmployees = (localEmployees || []).filter((emp) => {
+    if (!emp) return false;
     if (!assignedGroup) return true;
+    const group = (assignedGroup || '').toLowerCase();
     return (
       emp.department === assignedGroup ||
-      emp.role?.toLowerCase().includes(assignedGroup.toLowerCase()) ||
+      (emp.role && emp.role.toLowerCase().includes(group)) ||
       emp.role === 'Super Admin'
     );
   });

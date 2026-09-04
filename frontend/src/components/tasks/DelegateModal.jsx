@@ -88,7 +88,7 @@ const DelegateModal = ({ isOpen, onClose, task, employees = [], onDelegated, cur
                 <option value="">-- Choose Junior Executive --</option>
                 <optgroup label={`${task.department} Department Executives`}>
                   {staffEmployees
-                    .filter((e) => e.department === task.department && !e.role.includes('Admin'))
+                    .filter((e) => e && e.department === task.department && (!e.role || !e.role.includes('Admin')))
                     .map((e) => (
                       <option key={e._id} value={e._id}>
                         👤 {e.name} ({e.designation || e.role})
@@ -98,7 +98,7 @@ const DelegateModal = ({ isOpen, onClose, task, employees = [], onDelegated, cur
                 <optgroup label="All Staff & Department Admins">
                   {staffEmployees.map((e) => (
                     <option key={e._id} value={e._id}>
-                      {e.role.includes('Admin') ? '👑' : '👤'} {e.name} ({e.designation || e.role} - {e.department})
+                      {e.role && e.role.includes('Admin') ? '👑' : '👤'} {e.name} ({e.designation || e.role} - {e.department})
                     </option>
                   ))}
                 </optgroup>

@@ -33,19 +33,20 @@ const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], 
 
   const { title, subtitle, type, items = [] } = modalData;
 
-  const filteredItems = items.filter((item) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
+  const filteredItems = (items || []).filter((item) => {
+    if (!item) return false;
+    if (!search || !search.trim()) return true;
+    const q = search.toLowerCase().trim();
     return (
-      item.client?.clientName?.toLowerCase().includes(q) ||
-      item.clientName?.toLowerCase().includes(q) ||
-      item.taskName?.toLowerCase().includes(q) ||
-      item.serviceType?.toLowerCase().includes(q) ||
-      item.certificateType?.toLowerCase().includes(q) ||
-      item.department?.toLowerCase().includes(q) ||
-      item.assignedEmployee?.name?.toLowerCase().includes(q) ||
-      item.status?.toLowerCase().includes(q) ||
-      item.invoiceNumber?.toLowerCase().includes(q)
+      (item.client?.clientName && item.client.clientName.toLowerCase().includes(q)) ||
+      (item.clientName && item.clientName.toLowerCase().includes(q)) ||
+      (item.taskName && item.taskName.toLowerCase().includes(q)) ||
+      (item.serviceType && item.serviceType.toLowerCase().includes(q)) ||
+      (item.certificateType && item.certificateType.toLowerCase().includes(q)) ||
+      (item.department && item.department.toLowerCase().includes(q)) ||
+      (item.assignedEmployee?.name && item.assignedEmployee.name.toLowerCase().includes(q)) ||
+      (item.status && item.status.toLowerCase().includes(q)) ||
+      (item.invoiceNumber && item.invoiceNumber.toLowerCase().includes(q))
     );
   });
 

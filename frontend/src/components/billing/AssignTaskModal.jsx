@@ -58,11 +58,13 @@ const AssignTaskModal = ({ isOpen, onClose, invoice, onRefresh, employees = [] }
 
   if (!isOpen || !invoice) return null;
 
-  const filteredEmployees = localEmployees.filter((emp) => {
+  const filteredEmployees = (localEmployees || []).filter((emp) => {
+    if (!emp) return false;
     if (!department) return true;
+    const dept = (department || '').toLowerCase();
     return (
       emp.department === department ||
-      emp.role?.toLowerCase().includes(department.toLowerCase()) ||
+      (emp.role && emp.role.toLowerCase().includes(dept)) ||
       emp.role === 'Super Admin'
     );
   });

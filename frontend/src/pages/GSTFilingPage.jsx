@@ -161,13 +161,15 @@ const GSTFilingPage = () => {
   const [filingSortConfig, setFilingSortConfig] = useState({ key: 'filingDate', direction: 'desc' });
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
+    const q = (search || '').toLowerCase().trim();
+    return (tasks || []).filter((t) => {
+      if (!t) return false;
       const matchesSearch =
-        !search ||
-        t.taskName?.toLowerCase().includes(search.toLowerCase()) ||
-        t.client?.clientName?.toLowerCase().includes(search.toLowerCase()) ||
-        t.client?.gstin?.toLowerCase().includes(search.toLowerCase()) ||
-        t.assignedEmployee?.name?.toLowerCase().includes(search.toLowerCase());
+        !q ||
+        (t.taskName && t.taskName.toLowerCase().includes(q)) ||
+        (t.client?.clientName && t.client.clientName.toLowerCase().includes(q)) ||
+        (t.client?.gstin && t.client.gstin.toLowerCase().includes(q)) ||
+        (t.assignedEmployee?.name && t.assignedEmployee.name.toLowerCase().includes(q));
 
       const matchesStatus = !statusFilter || t.status === statusFilter;
       return matchesSearch && matchesStatus;
