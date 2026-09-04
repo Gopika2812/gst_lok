@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://gst-4vz4.onrender.com/api');
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'https://gst-lok.onrender.com/api');
 
 const api = axios.create({
   baseURL: BASE_URL,
