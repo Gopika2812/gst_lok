@@ -1,11 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, Search, User, LogOut, ShieldCheck, ChevronDown, CheckCircle2, AlertTriangle, Calendar, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+  Bell,
+  Search,
+  User,
+  LogOut,
+  ShieldCheck,
+  ChevronDown,
+  CheckCircle2,
+  AlertTriangle,
+  Calendar,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Smartphone,
+  Send,
+  Lock,
+  Radio
+} from 'lucide-react';
+import {
+  registerServiceWorker,
+  subscribeToPushNotifications,
+  sendTestPushNotification,
+  getNotificationPermission
+} from '../../services/notificationService';
 
 const Navbar = ({ onSearchChange, globalSearch, onToggleMobileMenu, isSidebarCollapsed }) => {
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [permStatus, setPermStatus] = useState('default');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [testCountdown, setTestCountdown] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
+
+  useEffect(() => {
+    registerServiceWorker();
+    setPermStatus(getNotificationPermission());
+  }, []);
+
+  const handleEnablePush = async () => {
+    setIsSubscribing(true);
+    setActionMessage(null);
+    try {
+      await subscribeToPushNotifications();
+      setPermStatus('granted');
+      setActionMessage({ type: 'success', text: '✅ Chrome & Mobile lock screen alerts enabled successfully!' });
+    } catch (err) {
+      console.error(err);
+      setActionMessage({ type: 'error', text: err.message || 'Failed to enable notifications.' });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleTestLockScreen = async (delay = 5) => {
+    setActionMessage(null);
+    try {
+      if (permStatus !== 'granted') {
+        await subscribeToPushNotifications();
+        setPermStatus('granted');
+      }
+
+      setTestCountdown(delay);
+      await sendTestPushNotification(delay);
+
+      const interval = setInterval(() => {
+        setTestCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setActionMessage({ type: 'success', text: '🎯 Notification sent! Check your phone/lock-screen.' });
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setTestCountdown(null);
+      setActionMessage({ type: 'error', text: err.message || 'Failed to trigger test push.' });
+    }
+  };
 
   const mockNotifications = [
     { id: 1, title: 'GST Filing Due Soon', text: 'GSTR-3B for monthly return due on 20th', time: '10m ago', icon: AlertTriangle, type: 'warning' },
@@ -57,6 +132,7 @@ const Navbar = ({ onSearchChange, globalSearch, onToggleMobileMenu, isSidebarCol
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 hover:text-[#0A1E3F]"
+            title="Notifications & Screen-Lock Alerts"
           >
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
@@ -67,19 +143,93 @@ const Navbar = ({ onSearchChange, globalSearch, onToggleMobileMenu, isSidebarCol
 
           {/* Notifications Popover */}
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-black/5 z-50">
+            <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-black/5 z-50">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h4 className="font-semibold text-slate-800 text-sm">Notifications</h4>
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">3 New</span>
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-semibold text-slate-800 text-sm">Notifications & Alerts</h4>
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Live</span>
+                </div>
+                {permStatus === 'granted' ? (
+                  <span className="flex items-center text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <Radio className="h-3 w-3 mr-1 text-emerald-500 animate-pulse" />
+                    Lock-Screen Active
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    Push Inactive
+                  </span>
+                )}
               </div>
-              <div className="mt-3 divide-y divide-slate-100">
+
+              {/* Push Notification Activation Card */}
+              <div className="my-3 rounded-xl border border-slate-100 bg-gradient-to-r from-slate-900 to-[#0A1E3F] p-3 text-white shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="rounded-lg bg-white/10 p-1.5">
+                      <Smartphone className="h-4 w-4 text-[#C59B27]" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold">Mobile Lock-Screen Alerts</p>
+                      <p className="text-[10px] text-slate-300">Get instant task alerts even when locked</p>
+                    </div>
+                  </div>
+                </div>
+
+                {testCountdown !== null ? (
+                  <div className="mt-2.5 flex items-center justify-center rounded-lg bg-amber-500/20 border border-amber-400/30 p-2 text-center">
+                    <Lock className="h-4 w-4 mr-1.5 text-amber-300 animate-bounce" />
+                    <span className="text-xs font-medium text-amber-200">
+                      🔒 Lock phone now! Alert in <b>{testCountdown}s</b>...
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2.5 grid grid-cols-2 gap-2">
+                    {permStatus !== 'granted' ? (
+                      <button
+                        onClick={handleEnablePush}
+                        disabled={isSubscribing}
+                        className="col-span-2 flex items-center justify-center rounded-lg bg-[#C59B27] px-2.5 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-[#b08e4c] disabled:opacity-50"
+                      >
+                        {isSubscribing ? 'Enabling...' : '🔔 Enable Chrome & Mobile Alerts'}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleTestLockScreen(5)}
+                          className="flex items-center justify-center rounded-lg bg-[#C59B27] px-2 py-1.5 text-[11px] font-bold text-slate-950 transition hover:bg-[#b08e4c]"
+                          title="Gives you 5 seconds to lock your mobile phone before firing push alert"
+                        >
+                          <Lock className="h-3 w-3 mr-1" />
+                          Test Lock Screen (5s)
+                        </button>
+                        <button
+                          onClick={() => handleTestLockScreen(0)}
+                          className="flex items-center justify-center rounded-lg bg-white/10 px-2 py-1.5 text-[11px] font-medium text-white transition hover:bg-white/20"
+                        >
+                          <Send className="h-3 w-3 mr-1 text-[#C59B27]" />
+                          Instant Test
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {actionMessage && (
+                  <div className={`mt-2 rounded-lg p-1.5 text-[11px] ${actionMessage.type === 'success' ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30' : 'bg-rose-950/80 text-rose-300 border border-rose-500/30'}`}>
+                    {actionMessage.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 px-1">Recent Activity</div>
+              <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
                 {mockNotifications.map((n) => (
-                  <div key={n.id} className="py-2.5 flex items-start space-x-3 hover:bg-slate-50 rounded-lg p-1.5 transition">
-                    <n.icon className={`h-4 w-4 mt-0.5 ${n.type === 'warning' ? 'text-amber-500' : n.type === 'success' ? 'text-emerald-600' : 'text-blue-500'}`} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-slate-800">{n.title}</p>
-                      <p className="text-xs text-slate-500">{n.text}</p>
-                      <span className="text-[10px] text-slate-400 mt-1 block">{n.time}</span>
+                  <div key={n.id} className="py-2 flex items-start space-x-2.5 hover:bg-slate-50 rounded-lg p-1.5 transition">
+                    <n.icon className={`h-4 w-4 mt-0.5 shrink-0 ${n.type === 'warning' ? 'text-amber-500' : n.type === 'success' ? 'text-emerald-600' : 'text-blue-500'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-800 truncate">{n.title}</p>
+                      <p className="text-[11px] text-slate-500 leading-snug">{n.text}</p>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">{n.time}</span>
                     </div>
                   </div>
                 ))}

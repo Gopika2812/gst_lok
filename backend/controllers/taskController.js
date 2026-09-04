@@ -2,6 +2,7 @@ const Task = require('../models/Task');
 const Client = require('../models/Client');
 const User = require('../models/User');
 const { logAudit } = require('../middleware/auditLogger');
+const { sendTaskAssignedPushNotification } = require('../services/pushNotificationService');
 
 const { getFileUrl } = require('../middleware/uploadMiddleware');
 
@@ -54,6 +55,12 @@ exports.createTask = async (req, res) => {
     });
 
     await logAudit(req.user, 'Task Assignment', 'Task Board', `Assigned task ${taskName} to employee ID: ${assignedEmployee}`, req);
+
+    // Asynchronously trigger lock-screen / Chrome Push Notification for assigned user
+    const targetUserId = assignedEmployee || req.user._id;
+    sendTaskAssignedPushNotification(task, targetUserId, req.user._id).catch(err => {
+      console.error('[Push Notification trigger error]', err);
+    });
 
     res.status(201).json({ message: 'Task assigned successfully', task });
   } catch (error) {
@@ -269,6 +276,11 @@ exports.delegateTask = async (req, res) => {
       .populate('client', 'clientName tradeName pan gstin phone status')
       .populate('assignedEmployee', 'name email role department designation')
       .populate('assignedBy', 'name email role department designation');
+
+    // Trigger Chrome / Mobile Push Notification to newly delegated employee
+    sendTaskAssignedPushNotification(updatedTask, assignedUser._id, req.user._id).catch(err => {
+      console.error('[Push Notification trigger error on delegation]', err);
+    });
 
     res.json({ message: `Task delegated successfully to ${assignedUser.name}`, task: updatedTask });
   } catch (error) {
