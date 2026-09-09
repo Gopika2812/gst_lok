@@ -118,6 +118,7 @@ exports.getDashboardSummary = async (req, res) => {
         .populate('client', 'clientName tradeName gstin pan phone email')
         .populate('assignedEmployee', 'name email role department designation')
         .populate('assignedBy', 'name role')
+        .populate('invoice', 'invoiceNumber invoiceDate total paymentStatus')
         .sort({ dueDate: 1, createdAt: -1 })
         .lean()
         .catch(() => []),

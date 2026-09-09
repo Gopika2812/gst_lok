@@ -145,6 +145,33 @@ exports.createInvoice = async (req, res) => {
       await invoice.save();
     }
 
+    // 4. Mark originating / completed task as billed so bill cannot be made again
+    if (req.body.taskId) {
+      await Task.findByIdAndUpdate(req.body.taskId, {
+        isBilled: true,
+        invoice: invoice._id,
+        invoiceNumber: invoice.invoiceNumber
+      });
+    } else {
+      // Also match any completed task for this client with the same service name
+      await Task.updateMany(
+        {
+          client,
+          $or: [
+            { taskName: serviceType },
+            { taskName: { $regex: serviceType.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), $options: 'i' } }
+          ],
+          status: 'Completed',
+          isBilled: { $ne: true }
+        },
+        {
+          isBilled: true,
+          invoice: invoice._id,
+          invoiceNumber: invoice.invoiceNumber
+        }
+      );
+    }
+
     await logAudit(req.user, 'Invoice Created', 'Billing', `Generated invoice ${invoiceNumber} total ₹${total} for ${clientDoc.clientName}`, req);
 
     res.status(201).json({ message: 'Invoice generated successfully', invoice });

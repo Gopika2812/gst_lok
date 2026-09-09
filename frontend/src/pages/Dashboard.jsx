@@ -699,6 +699,7 @@ const Dashboard = () => {
         onRefresh={fetchDashboardData}
         clients={clients}
         employees={employees}
+        invoices={summary?.details?.allFilteredInvoices || []}
       />
 
       {/* Task & Client Modals for Super Admin / Admin */}

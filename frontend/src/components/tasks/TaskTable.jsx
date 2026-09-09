@@ -1,17 +1,29 @@
-import React, { useState, useMemo } from 'react';
-import { Calendar, User, Clock, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Building2, Trash2, UserPlus, Receipt } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Calendar, User, Clock, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Building2, Trash2, UserPlus, Receipt, Printer } from 'lucide-react';
 import Badge from '../common/Badge';
 import { SortableHeader, sortTableData } from '../common/SortableHeader';
 import InvoiceModal from '../billing/InvoiceModal';
+import api from '../../services/api';
+import { findTaskInvoice, viewOrPrintInvoice } from '../../utils/billingUtils';
 
-const TaskTable = ({ tasks = [], onStatusChange, onDeleteTask, onDelegateTask, currentUser, onRefresh }) => {
+const TaskTable = ({ tasks = [], onStatusChange, onDeleteTask, onDelegateTask, currentUser, onRefresh, invoices = [] }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'dueDate', direction: 'asc' });
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [invoiceInitialData, setInvoiceInitialData] = useState(null);
+  const [allInvoices, setAllInvoices] = useState(invoices);
+
+  useEffect(() => {
+    if (invoices && invoices.length > 0) {
+      setAllInvoices(invoices);
+    } else {
+      api.get('/invoices').then((res) => setAllInvoices(res.data || [])).catch(() => {});
+    }
+  }, [invoices]);
 
   const handleOpenInvoice = (task) => {
     const clientId = task.client?._id || task.client || '';
     setInvoiceInitialData({
+      taskId: task._id,
       client: clientId,
       clientId: clientId,
       clientObj: task.client,
@@ -107,6 +119,9 @@ const TaskTable = ({ tasks = [], onStatusChange, onDeleteTask, onDelegateTask, c
                       hour12: true
                     });
 
+                const matchedInvoice = findTaskInvoice(task, allInvoices);
+                const isBilled = task.isBilled || !!matchedInvoice;
+
                 return (
                   <tr key={task._id} className="hover:bg-slate-50 transition">
                     {/* Title & Remarks */}
@@ -199,15 +214,33 @@ const TaskTable = ({ tasks = [], onStatusChange, onDeleteTask, onDelegateTask, c
                           <option value="Can't Complete">Can't Complete</option>
                         </select>
                         {task.status === 'Completed' && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenInvoice(task)}
-                            title={task.client?.clientName ? `Generate Bill / Invoice for ${task.client.clientName}` : 'Generate Bill / Invoice'}
-                            className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
-                          >
-                            <Receipt className="h-3 w-3" />
-                            <span>Make Bill</span>
-                          </button>
+                          isBilled ? (
+                            <div className="inline-flex items-center space-x-1">
+                              <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                <span>Generated</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => viewOrPrintInvoice(matchedInvoice || { _id: task.invoiceId || task.invoice, invoiceNumber: task.invoiceNumber })}
+                                title={`View & Print Bill (${matchedInvoice?.invoiceNumber || task.invoiceNumber || 'Invoice'})`}
+                                className="inline-flex items-center space-x-1 rounded-lg bg-[#0A1E3F] hover:bg-[#16385C] text-white px-2 py-0.5 text-[10px] font-bold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                              >
+                                <Printer className="h-3 w-3 text-[#C59B27]" />
+                                <span>Print</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenInvoice(task)}
+                              title={task.client?.clientName ? `Generate Bill / Invoice for ${task.client.clientName}` : 'Generate Bill / Invoice'}
+                              className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                            >
+                              <Receipt className="h-3 w-3" />
+                              <span>Make Bill</span>
+                            </button>
+                          )
                         )}
                       </div>
                     </td>
@@ -241,6 +274,7 @@ const TaskTable = ({ tasks = [], onStatusChange, onDeleteTask, onDelegateTask, c
             setInvoiceInitialData(null);
           }}
           onRefresh={() => {
+            api.get('/invoices').then((res) => setAllInvoices(res.data || [])).catch(() => {});
             if (onRefresh) onRefresh();
           }}
           initialData={invoiceInitialData}

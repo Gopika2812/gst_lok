@@ -23,6 +23,7 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
     return d.toISOString().split('T')[0];
   });
   const [taskPriority, setTaskPriority] = useState('High');
+  const [originTaskId, setOriginTaskId] = useState(null);
 
   const [localEmployees, setLocalEmployees] = useState(employees);
   const [localClients, setLocalClients] = useState(clients);
@@ -54,7 +55,9 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
         setPaymentMode(invoice.paymentMode || 'Bank Transfer');
         setRemarks(invoice.remarks || '');
         setMoveToTaskAssignment(false);
+        setOriginTaskId(null);
       } else if (initialData) {
+        setOriginTaskId(initialData.taskId || initialData.task?._id || initialData._id || null);
         const cId = initialData.client?._id || initialData.client || initialData.clientId || '';
         setSelectedClient(cId);
         const sType = initialData.serviceType || initialData.taskName || 'GST Filing GSTR-3B & GSTR-1';
@@ -199,6 +202,7 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
         });
       } else {
         await api.post('/invoices', {
+          taskId: originTaskId,
           client: selectedClient,
           serviceType,
           billingCycle,

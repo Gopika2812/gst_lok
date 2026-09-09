@@ -13,13 +13,16 @@ import {
   AlertTriangle,
   Search,
   X,
-  Receipt
+  Receipt,
+  Printer
 } from 'lucide-react';
+import { findTaskInvoice, viewOrPrintInvoice } from '../utils/billingUtils';
 
 const ITFilingPage = () => {
   const [tasks, setTasks] = useState([]);
   const [filings, setFilings] = useState([]);
   const [clients, setClients] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -34,6 +37,7 @@ const ITFilingPage = () => {
   const handleOpenInvoice = (task) => {
     const clientId = task.client?._id || task.client || '';
     setInvoiceInitialData({
+      taskId: task._id,
       client: clientId,
       clientId: clientId,
       clientObj: task.client,
@@ -64,14 +68,16 @@ const ITFilingPage = () => {
   const fetchITWorkspaceData = async () => {
     setLoading(true);
     try {
-      const [taskRes, filRes, clientRes] = await Promise.all([
+      const [taskRes, filRes, clientRes, invRes] = await Promise.all([
         api.get('/tasks', { params: { department: 'Income Tax' } }),
         api.get('/filings', { params: { department: 'Income Tax' } }),
-        api.get('/clients')
+        api.get('/clients'),
+        api.get('/invoices').catch(() => ({ data: [] }))
       ]);
       setTasks(taskRes.data);
       setFilings(filRes.data);
       setClients(clientRes.data);
+      setInvoices(invRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -345,20 +351,44 @@ const ITFilingPage = () => {
                             <span>Upload ITR</span>
                           </button>
                         ) : (
-                          <div className="flex items-center justify-center space-x-2">
-                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-700">
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Completed
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenInvoice(t)}
-                              title={t.client?.clientName ? `Generate Bill / Invoice for ${t.client.clientName}` : 'Generate Bill / Invoice'}
-                              className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
-                            >
-                              <Receipt className="h-3 w-3" />
-                              <span>Make Bill</span>
-                            </button>
-                          </div>
+                          (() => {
+                            const matchedInvoice = findTaskInvoice(t, invoices);
+                            const isBilled = t.isBilled || !!matchedInvoice;
+                            return (
+                              <div className="flex items-center justify-center space-x-1.5">
+                                <span className="inline-flex items-center text-[10px] font-bold text-emerald-700">
+                                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Completed
+                                </span>
+                                {isBilled ? (
+                                  <div className="inline-flex items-center space-x-1">
+                                    <span className="inline-flex items-center space-x-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                      <span>Generated</span>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => viewOrPrintInvoice(matchedInvoice || { _id: t.invoiceId || t.invoice, invoiceNumber: t.invoiceNumber })}
+                                      title={`View & Print Bill (${matchedInvoice?.invoiceNumber || t.invoiceNumber || 'Invoice'})`}
+                                      className="inline-flex items-center space-x-1 rounded-lg bg-[#0A1E3F] hover:bg-[#16385C] text-white px-2 py-0.5 text-[10px] font-bold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                                    >
+                                      <Printer className="h-3 w-3 text-[#C59B27]" />
+                                      <span>Print</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenInvoice(t)}
+                                    title={t.client?.clientName ? `Generate Bill / Invoice for ${t.client.clientName}` : 'Generate Bill / Invoice'}
+                                    className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                                  >
+                                    <Receipt className="h-3 w-3" />
+                                    <span>Make Bill</span>
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()
                         )}
                       </td>
                     </tr>

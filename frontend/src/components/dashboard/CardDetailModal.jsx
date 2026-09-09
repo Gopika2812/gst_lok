@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
-import { X, Search, Download, CheckCircle2, Clock, AlertTriangle, XCircle, FileText, User, Building2, Receipt } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Search, Download, CheckCircle2, Clock, AlertTriangle, XCircle, FileText, User, Building2, Receipt, Printer } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
 import InvoiceModal from '../billing/InvoiceModal';
+import api from '../../services/api';
+import { findTaskInvoice, viewOrPrintInvoice } from '../../utils/billingUtils';
 
-const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], employees = [] }) => {
+const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], employees = [], invoices = [] }) => {
   const [search, setSearch] = useState('');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [invoiceInitialData, setInvoiceInitialData] = useState(null);
+  const [allInvoices, setAllInvoices] = useState(invoices);
+
+  useEffect(() => {
+    if (invoices && invoices.length > 0) {
+      setAllInvoices(invoices);
+    } else if (isOpen) {
+      api.get('/invoices').then((res) => setAllInvoices(res.data || [])).catch(() => {});
+    }
+  }, [isOpen, invoices]);
 
   const handleOpenInvoice = (task) => {
     const clientId = task.client?._id || task.client || '';
     setInvoiceInitialData({
+      taskId: task._id,
       client: clientId,
       clientId: clientId,
       clientObj: task.client,
@@ -203,6 +215,9 @@ const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], 
                       new Date(item.dueDate) < new Date() &&
                       item.status !== 'Completed' &&
                       item.status !== "Can't Complete";
+                    const matchedInvoice = findTaskInvoice(item, allInvoices);
+                    const isBilled = item.isBilled || !!matchedInvoice;
+
                     return (
                       <tr key={item._id || idx} className="hover:bg-slate-50 transition">
                         <td className="p-3 font-bold text-slate-800">
@@ -250,15 +265,33 @@ const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], 
                               {item.status}
                             </span>
                             {item.status === 'Completed' && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenInvoice(item)}
-                                title={item.client?.clientName ? `Generate Bill / Invoice for ${item.client.clientName}` : 'Generate Bill / Invoice'}
-                                className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
-                              >
-                                <Receipt className="h-3 w-3" />
-                                <span>Make Bill</span>
-                              </button>
+                              isBilled ? (
+                                <div className="inline-flex items-center space-x-1.5">
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                    <span>Generated{matchedInvoice?.invoiceNumber ? ` (${matchedInvoice.invoiceNumber})` : ''}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => viewOrPrintInvoice(matchedInvoice || { _id: item.invoiceId || item.invoice, invoiceNumber: item.invoiceNumber })}
+                                    title={`View & Print Bill (${matchedInvoice?.invoiceNumber || item.invoiceNumber || 'Invoice'})`}
+                                    className="inline-flex items-center space-x-1 rounded-lg bg-[#0A1E3F] hover:bg-[#16385C] text-white px-2 py-0.5 text-[10px] font-bold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                                  >
+                                    <Printer className="h-3 w-3 text-[#C59B27]" />
+                                    <span>Print</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenInvoice(item)}
+                                  title={item.client?.clientName ? `Generate Bill / Invoice for ${item.client.clientName}` : 'Generate Bill / Invoice'}
+                                  className="inline-flex items-center space-x-1 rounded-lg bg-gradient-to-r from-amber-500 to-[#C59B27] hover:from-amber-600 hover:to-[#A68018] text-white px-2 py-0.5 text-[10px] font-extrabold shadow-2xs hover:shadow-xs transition transform hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
+                                >
+                                  <Receipt className="h-3 w-3" />
+                                  <span>Make Bill</span>
+                                </button>
+                              )
                             )}
                           </div>
                         </td>
@@ -359,6 +392,7 @@ const CardDetailModal = ({ isOpen, onClose, modalData, onRefresh, clients = [], 
             setInvoiceInitialData(null);
           }}
           onRefresh={() => {
+            api.get('/invoices').then((res) => setAllInvoices(res.data || [])).catch(() => {});
             if (onRefresh) onRefresh();
           }}
           clients={clients}
