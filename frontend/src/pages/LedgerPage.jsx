@@ -83,7 +83,78 @@ const LedgerPage = () => {
         setClients(res.data.clients);
       }
     } catch (err) {
-      console.error('Failed to fetch ledger summary:', err);
+      console.warn('Ledger summary endpoint unavailable, falling back to clients & invoices:', err.message);
+      try {
+        const [clientRes, invoiceRes] = await Promise.all([
+          api.get('/clients'),
+          api.get('/invoices').catch(() => ({ data: [] }))
+        ]);
+
+        const clientList = clientRes.data || [];
+        const invoiceList = invoiceRes.data || [];
+
+        // Build debit/credit map from invoices for each client
+        const invoiceMap = {};
+        for (const inv of invoiceList) {
+          const cId = typeof inv.client === 'object' ? inv.client?._id : inv.client;
+          if (cId) {
+            if (!invoiceMap[cId]) {
+              invoiceMap[cId] = { debit: 0, credit: 0, count: 0, lastDate: inv.invoiceDate || inv.createdAt };
+            }
+            invoiceMap[cId].debit += (Number(inv.total) || 0);
+            invoiceMap[cId].credit += (Number(inv.paidAmount) || 0);
+            invoiceMap[cId].count += 1;
+            if (inv.createdAt && (!invoiceMap[cId].lastDate || new Date(inv.createdAt) > new Date(invoiceMap[cId].lastDate))) {
+              invoiceMap[cId].lastDate = inv.createdAt;
+            }
+          }
+        }
+
+        let overallDebit = 0;
+        let overallCredit = 0;
+        let overallOutstanding = 0;
+
+        const summaryList = clientList.map((client) => {
+          const invStats = invoiceMap[client._id] || { debit: 0, credit: 0, count: 0, lastDate: null };
+          const openingBal = Number(client.openingBalance) || 0;
+          const closingBal = client.closingBalance !== undefined 
+            ? Number(client.closingBalance) 
+            : (openingBal + invStats.debit - invStats.credit);
+
+          overallDebit += invStats.debit;
+          overallCredit += invStats.credit;
+          overallOutstanding += closingBal;
+
+          return {
+            _id: client._id,
+            clientName: client.clientName,
+            tradeName: client.tradeName,
+            gstin: client.gstin,
+            pan: client.pan,
+            phone: client.phone,
+            email: client.email,
+            city: client.city,
+            state: client.state,
+            openingBalance: openingBal,
+            totalDebit: invStats.debit,
+            totalCredit: invStats.credit,
+            closingBalance: closingBal,
+            entriesCount: invStats.count,
+            lastTransactionDate: invStats.lastDate || client.updatedAt || client.createdAt
+          };
+        });
+
+        setSummaryData({
+          totalClients: summaryList.length,
+          overallDebit,
+          overallCredit,
+          overallOutstanding,
+          clients: summaryList
+        });
+        setClients(summaryList);
+      } catch (fallbackErr) {
+        console.error('Failed to fetch fallback client ledger:', fallbackErr);
+      }
     } finally {
       setSummaryLoading(false);
     }
