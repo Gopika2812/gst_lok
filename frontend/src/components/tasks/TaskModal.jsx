@@ -360,6 +360,15 @@ const TaskModal = ({ isOpen, onClose, onRefresh, employees = [], clients = [], d
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 text-xs font-medium text-slate-800 outline-none transition focus:border-[#C59B27] focus:bg-white"
               >
                 <option value="">-- Select Person --</option>
+                <optgroup label="👑 Super Admin & Leadership">
+                  {localEmployees
+                    .filter((e) => e.role === 'Super Admin')
+                    .map((e) => (
+                      <option key={e._id} value={e._id}>
+                        {e.name} ({e.designation || 'Super Admin'} - {e.department})
+                      </option>
+                    ))}
+                </optgroup>
                 <optgroup label="Department Admins & Managers">
                   {localEmployees
                     .filter((e) => e.role && e.role.includes('Admin') && e.role !== 'Super Admin')
