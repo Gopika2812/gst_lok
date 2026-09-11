@@ -8,8 +8,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
   const [billingCycle, setBillingCycle] = useState('Monthly');
   const [items, setItems] = useState([{ description: 'GST Monthly Filing Fee', amount: 5000 }]);
   const [gstPercent, setGstPercent] = useState(0);
-  const [discount, setDiscount] = useState(0);
-  const [paidAmount, setPaidAmount] = useState(0);
+  const [discount, setDiscount] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('Bank Transfer');
   const [remarks, setRemarks] = useState('');
   const [moveToTaskAssignment, setMoveToTaskAssignment] = useState(true);
@@ -48,10 +48,10 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
         setSelectedClient(invoice.client?._id || invoice.client || '');
         setServiceType(invoice.serviceType || 'GST Filing GSTR-3B & GSTR-1');
         setBillingCycle(invoice.billingCycle || 'Monthly');
-        setItems(invoice.items?.length ? invoice.items : [{ description: invoice.serviceType || 'Service', amount: invoice.subTotal || 0 }]);
+        setItems(invoice.items?.length ? invoice.items.map(it => ({ ...it, amount: it.amount ?? '' })) : [{ description: invoice.serviceType || 'Service', amount: invoice.subTotal ?? '' }]);
         setGstPercent(0);
-        setDiscount(invoice.discount || 0);
-        setPaidAmount(invoice.paidAmount || 0);
+        setDiscount(invoice.discount ? invoice.discount : '');
+        setPaidAmount(invoice.paidAmount ? invoice.paidAmount : '');
         setPaymentMode(invoice.paymentMode || 'Bank Transfer');
         setRemarks(invoice.remarks || '');
         setMoveToTaskAssignment(false);
@@ -65,12 +65,12 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
         setBillingCycle(initialData.billingCycle || 'Monthly');
         setItems(
           initialData.items?.length
-            ? initialData.items
+            ? initialData.items.map(it => ({ ...it, amount: it.amount ?? '' }))
             : [{ description: `${initialData.taskName || sType} Fee`, amount: initialData.amount || 5000 }]
         );
         setGstPercent(0);
-        setDiscount(initialData.discount || 0);
-        setPaidAmount(initialData.paidAmount || 0);
+        setDiscount(initialData.discount ? initialData.discount : '');
+        setPaidAmount(initialData.paidAmount ? initialData.paidAmount : '');
         setPaymentMode(initialData.paymentMode || 'Bank Transfer');
         setRemarks(initialData.remarks || (initialData.taskName ? `Billing for completed task: ${initialData.taskName}` : ''));
         setMoveToTaskAssignment(false);
@@ -81,8 +81,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
         setBillingCycle('Monthly');
         setItems([{ description: 'GST Monthly Filing Fee', amount: 5000 }]);
         setGstPercent(0);
-        setDiscount(0);
-        setPaidAmount(0);
+        setDiscount('');
+        setPaidAmount('');
         setPaymentMode('Bank Transfer');
         setRemarks('');
         setMoveToTaskAssignment(true);
@@ -119,7 +119,7 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
   };
 
   const handleAddItem = () => {
-    setItems([...items, { description: '', amount: 0 }]);
+    setItems([...items, { description: '', amount: '' }]);
   };
 
   const handleRemoveItem = (index) => {
@@ -128,7 +128,7 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
-    newItems[index][field] = field === 'amount' ? Number(value) : value;
+    newItems[index][field] = value;
     setItems(newItems);
   };
 
@@ -172,8 +172,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
   });
 
   const subTotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const total = Math.max(0, subTotal - Number(discount));
-  const pendingAmount = Math.max(0, total - Number(paidAmount));
+  const total = Math.max(0, subTotal - (Number(discount) || 0));
+  const pendingAmount = Math.max(0, total - (Number(paidAmount) || 0));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -185,18 +185,23 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
     setLoading(true);
     setError('');
 
+    const formattedItems = items.map((it) => ({
+      description: it.description || 'Service',
+      amount: Number(it.amount) || 0
+    }));
+
     try {
       if (invoice) {
         await api.put(`/invoices/${invoice._id}`, {
           serviceType,
           billingCycle,
-          items,
+          items: formattedItems,
           subTotal,
           gstPercent: 0,
           gstAmount: 0,
-          discount,
+          discount: Number(discount) || 0,
           total,
-          paidAmount,
+          paidAmount: Number(paidAmount) || 0,
           paymentMode,
           remarks
         });
@@ -206,13 +211,13 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
           client: selectedClient,
           serviceType,
           billingCycle,
-          items,
+          items: formattedItems,
           subTotal,
           gstPercent: 0,
           gstAmount: 0,
-          discount,
+          discount: Number(discount) || 0,
           total,
-          paidAmount,
+          paidAmount: Number(paidAmount) || 0,
           paymentMode,
           remarks,
           moveToTaskAssignment,
@@ -378,9 +383,10 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
                 <div className="flex items-center space-x-2">
                   <input
                     type="number"
-                    placeholder="Amount (₹)"
+                    placeholder="0"
                     value={item.amount}
                     onChange={(e) => handleItemChange(index, 'amount', e.target.value)}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                     className="flex-1 sm:w-32 rounded-xl border border-slate-200 bg-white p-2 text-xs outline-none focus:border-[#C59B27]"
                   />
                   {items.length > 1 && (
@@ -404,7 +410,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
               <input
                 type="number"
                 value={discount}
-                onChange={(e) => setDiscount(Number(e.target.value))}
+                onChange={(e) => setDiscount(e.target.value)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 placeholder="0"
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-xs outline-none focus:border-[#C59B27]"
               />
@@ -427,7 +434,8 @@ const InvoiceModal = ({ isOpen, onClose, onRefresh, clients = [], employees = []
               <input
                 type="number"
                 value={paidAmount}
-                onChange={(e) => setPaidAmount(Number(e.target.value))}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                 placeholder="0"
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-xs outline-none focus:border-[#C59B27]"
               />

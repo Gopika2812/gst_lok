@@ -35,7 +35,7 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
     contactPerson: '',
     city: 'Chennai',
     pincode: '',
-    openingBalance: 0,
+    openingBalance: '',
     creditLimit: 50000,
     remarks: ''
   });
@@ -71,7 +71,7 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
           contactPerson: client.contactPerson || '',
           city: client.city || 'Chennai',
           pincode: client.pincode || '',
-          openingBalance: client.openingBalance || 0,
+          openingBalance: client.openingBalance !== undefined && client.openingBalance !== null ? (client.openingBalance === 0 ? '' : client.openingBalance) : '',
           creditLimit: client.creditLimit || 50000,
           remarks: client.remarks || ''
         });
@@ -112,7 +112,7 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
       contactPerson: '',
       city: 'Chennai',
       pincode: '',
-      openingBalance: 0,
+      openingBalance: '',
       creditLimit: 50000,
       remarks: ''
     });
@@ -264,7 +264,13 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
     try {
       const data = new FormData();
       Object.keys(formData).forEach((key) => {
-        data.append(key, formData[key]);
+        if (key === 'openingBalance') {
+          data.append(key, Number(formData[key]) || 0);
+        } else if (key === 'creditLimit') {
+          data.append(key, Number(formData[key]) || 0);
+        } else {
+          data.append(key, formData[key]);
+        }
       });
       data.append('registrationCategory', registrationCategory);
       data.append('subscribedServices', JSON.stringify(subscribedServices));
@@ -605,6 +611,8 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
                   name="openingBalance"
                   value={formData.openingBalance}
                   onChange={handleChange}
+                  onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
+                  placeholder="0"
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none focus:border-[#C59B27]"
                 />
               </div>

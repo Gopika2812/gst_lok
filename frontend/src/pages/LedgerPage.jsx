@@ -959,6 +959,7 @@ const LedgerPage = () => {
                     required
                     value={txData.amount}
                     onChange={(e) => setTxData({ ...txData, amount: e.target.value })}
+                    onFocus={(e) => { if (e.target.value === '0') e.target.select(); }}
                     placeholder="e.g. 5000"
                     className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900 outline-none focus:border-[#C59B27]"
                   />
