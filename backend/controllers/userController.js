@@ -185,7 +185,7 @@ exports.deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    if (user.email === 'royallogu2020@gmail.com' || user.role === 'Super Admin') {
+    if (user.email === 'royallogu2026@gmail.com' || user.role === 'Super Admin') {
       return res.status(400).json({ message: 'Cannot delete primary Super Admin account' });
     }
 

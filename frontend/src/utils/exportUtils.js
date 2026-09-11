@@ -172,7 +172,7 @@ export const printExecutiveReport = ({
         </table>
 
         <div class="footer">
-          <div>Confidential • Royal Accounting ERP Operations • royallogu2020@gmail.com</div>
+          <div>Confidential • Royal Accounting ERP Operations • royallogu2026@gmail.com</div>
           <div>Page 1 of 1</div>
         </div>
 
@@ -528,7 +528,7 @@ export const printClientLedger = ({ ledgerData = {}, client = null, user = {} })
                 <h1 class="company-name">ROYAL ACCOUNTING</h1>
                 <div class="company-tagline">GST & Auditor ERP • Tax Consultancy Services</div>
                 <div class="company-details">
-                  Ph / WhatsApp: <strong>+91 99943 60994</strong> • Email: <strong>royallogu2020@gmail.com</strong><br />
+                  Ph / WhatsApp: <strong>+91 99943 60994</strong> • Email: <strong>royallogu2026@gmail.com</strong><br />
                   Services: GST Filing • Income Tax • Company Incorporation • Auditing • Tamil Nadu
                 </div>
               </td>
@@ -661,7 +661,7 @@ export const printClientLedger = ({ ledgerData = {}, client = null, user = {} })
           </table>
 
           <div class="footer-bar">
-            <div>Royal Accounting & Tax ERP • Confidential Client Record • royallogu2020@gmail.com</div>
+            <div>Royal Accounting & Tax ERP • Confidential Client Record • royallogu2026@gmail.com</div>
             <div>Page 1 of 1</div>
           </div>
 

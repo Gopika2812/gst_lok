@@ -3,13 +3,13 @@ const User = require('../models/User');
 const seedOrgHierarchy = async () => {
   try {
     // 1. Super Admin (Logunathan - Founder & Principal Auditor)
-    let logunathan = await User.findOne({ email: 'royallogu2020@gmail.com' });
+    let logunathan = await User.findOne({ email: 'royallogu2026@gmail.com' });
     if (!logunathan) {
       logunathan = await User.create({
         name: 'Logunathan',
-        email: 'royallogu2020@gmail.com',
+        email: 'royallogu2026@gmail.com',
         phone: '+91 99943 60994',
-        password: 'admin123',
+        password: 'Logu@81',
         role: 'Super Admin',
         department: 'Management',
         designation: 'Founder & Principal Auditor',
@@ -24,12 +24,12 @@ const seedOrgHierarchy = async () => {
       await logunathan.save();
     }
 
-    // Clean up any legacy admin emails if present
+    // Clean up legacy emails
     await User.deleteMany({
-      email: { $in: ['sainath@vigneshassociates.com', 'superadmin@vigneshassociates.com'] }
+      email: { $in: ['royallogu2020@gmail.com', 'sainath@vigneshassociates.com', 'superadmin@vigneshassociates.com'] }
     });
 
-    console.log('[Seed] Super Admin (Logunathan) verified successfully.');
+    console.log('[Seed] Super Admin (Logunathan / royallogu2026@gmail.com) verified successfully.');
 
     // 2. Seed Default Master Services & Sub-Services
     const ServiceMaster = require('../models/ServiceMaster');

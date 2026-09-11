@@ -41,9 +41,9 @@ const seedDB = async () => {
     // 1. Seed Super Admin
     const superAdmin = await User.create({
       name: 'Logunathan',
-      email: 'royallogu2020@gmail.com',
+      email: 'royallogu2026@gmail.com',
       phone: '+91 99943 60994',
-      password: 'admin123',
+      password: 'Logu@81',
       role: 'Super Admin',
       status: 'Approved',
       department: 'Management',

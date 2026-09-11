@@ -52,15 +52,15 @@ const flushDB = async () => {
     // 3. Create Super Admin User: Logunathan
     const superAdmin = await User.create({
       name: 'Logunathan',
-      email: 'royallogu2020@gmail.com',
+      email: 'royallogu2026@gmail.com',
       phone: '+91 99943 60994',
-      password: 'admin123',
+      password: 'Logu@81',
       role: 'Super Admin',
+      status: 'Approved',
       department: 'Management',
-      designation: 'Founder & Principal Auditor',
-      status: 'Approved'
+      designation: 'Founder & Principal Auditor'
     });
-    console.log('[Flush] Created Super Admin account (Logunathan / royallogu2020@gmail.com / admin123)');
+    console.log('[Flush] Created Super Admin account (Logunathan / royallogu2026@gmail.com / Logu@81)');
 
     // 4. Create complete Super Admin permissions
     const defaultModules = {

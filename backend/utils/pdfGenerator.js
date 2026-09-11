@@ -108,7 +108,7 @@ exports.generateInvoicePDF = (invoice, client, res) => {
     .fillColor('#475569')
     .fontSize(7.5)
     .font('Helvetica')
-    .text('Ph: +91 99943 60994  •  Email: royallogu2020@gmail.com  •  Tamil Nadu', titleX, logoTop + 26);
+    .text('Ph: +91 99943 60994  •  Email: royallogu2026@gmail.com  •  Tamil Nadu', titleX, logoTop + 26);
 
   // Invoice Title & Number (Top Right)
   doc
