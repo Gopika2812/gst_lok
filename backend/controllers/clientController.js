@@ -25,7 +25,7 @@ exports.createClient = async (req, res) => {
           { phone: cleanPhone.replace('+91', '') }
         ]
       });
-      if (existingPhone && clientData.registrationCategory === 'New Client') {
+      if (existingPhone && (clientData.registrationCategory === 'New Client' || clientData.registrationCategory === 'No Certification')) {
         return res.status(400).json({
           message: `Duplicate Client Error: A client with phone number "${cleanPhone}" already exists (${existingPhone.clientName} - ${existingPhone.clientCode}).`
         });
@@ -45,7 +45,7 @@ exports.createClient = async (req, res) => {
     if (clientData.pan && clientData.pan.trim() && clientData.pan.trim().toUpperCase() !== 'N/A') {
       const cleanPan = clientData.pan.trim().toUpperCase();
       const existingPan = await Client.findOne({ pan: cleanPan });
-      if (existingPan && clientData.registrationCategory === 'New Client') {
+      if (existingPan && (clientData.registrationCategory === 'New Client' || clientData.registrationCategory === 'No Certification')) {
         return res.status(400).json({
           message: `Duplicate Client Error: A client with PAN "${cleanPan}" already exists (${existingPan.clientName} - ${existingPan.clientCode}).`
         });
@@ -56,11 +56,22 @@ exports.createClient = async (req, res) => {
     if (!clientData.responsibleEmployee) delete clientData.responsibleEmployee;
     if (!clientData.dateOfIncorporation) delete clientData.dateOfIncorporation;
 
-    // Normalize registrationCategory enum
-    if (clientData.registrationCategory && clientData.registrationCategory.includes('New Client')) {
+    // Normalize registrationCategory enum & noCertification flag
+    const isNoCertification =
+      clientData.registrationCategory === 'No Certification' ||
+      (typeof clientData.registrationCategory === 'string' && clientData.registrationCategory.includes('No Certification')) ||
+      clientData.noCertification === 'true' ||
+      clientData.noCertification === true;
+
+    if (isNoCertification) {
+      clientData.registrationCategory = 'No Certification';
+      clientData.noCertification = true;
+    } else if (clientData.registrationCategory && clientData.registrationCategory.includes('New Client')) {
       clientData.registrationCategory = 'New Client';
+      clientData.noCertification = false;
     } else {
       clientData.registrationCategory = 'Registered Client';
+      clientData.noCertification = false;
     }
 
     // Parse subscribedServices if sent as JSON string via FormData
@@ -103,41 +114,43 @@ exports.createClient = async (req, res) => {
 
     const client = await Client.create(clientData);
 
-    // Automatically create Certification Tracking Record (Module 2)
-    try {
-      let derivedCertificateType = 'GST Registration';
-      if (Array.isArray(clientData.subscribedServices) && clientData.subscribedServices.length > 0) {
-        const subNames = clientData.subscribedServices.map((s) => s.subServiceName || s.serviceName).filter(Boolean);
-        derivedCertificateType = subNames.join(', ');
-      } else if (clientData.gstin) {
-        derivedCertificateType = 'GST Registration';
-      }
+    // Automatically create Certification Tracking Record (Module 2) ONLY if client is NOT 'No Certification'
+    if (!isNoCertification) {
+      try {
+        let derivedCertificateType = 'GST Registration';
+        if (Array.isArray(clientData.subscribedServices) && clientData.subscribedServices.length > 0) {
+          const subNames = clientData.subscribedServices.map((s) => s.subServiceName || s.serviceName).filter(Boolean);
+          derivedCertificateType = subNames.join(', ');
+        } else if (clientData.gstin) {
+          derivedCertificateType = 'GST Registration';
+        }
 
-      if (clientData.registrationCategory === 'New Client') {
-        await Certification.create({
-          client: client._id,
-          certificateType: derivedCertificateType,
-          applicationDate: new Date(),
-          status: 'Waiting For Certificate',
-          certificateReceived: 'No',
-          movedToBilling: false,
-          remarks: 'New Client Registration - Pending Certificate Approval'
-        });
-      } else {
-        // Existing Client (Option 2): Already Has Certificate -> Auto-marked as Certificate Received & Ready for Billing
-        await Certification.create({
-          client: client._id,
-          certificateType: derivedCertificateType || (client.gstin ? 'GST Certificate' : 'PAN / Incorporation'),
-          applicationDate: new Date(),
-          certificateNumber: client.gstin || client.pan || 'EX-CERTIFIED',
-          status: 'Certificate Received',
-          certificateReceived: 'Yes',
-          movedToBilling: true,
-          remarks: 'Existing Client - Certificate Already Present (Ready for Billing)'
-        });
+        if (clientData.registrationCategory === 'New Client') {
+          await Certification.create({
+            client: client._id,
+            certificateType: derivedCertificateType,
+            applicationDate: new Date(),
+            status: 'Waiting For Certificate',
+            certificateReceived: 'No',
+            movedToBilling: false,
+            remarks: 'New Client Registration - Pending Certificate Approval'
+          });
+        } else if (clientData.registrationCategory === 'Registered Client') {
+          // Existing Client (Option 2): Already Has Certificate -> Auto-marked as Certificate Received & Ready for Billing
+          await Certification.create({
+            client: client._id,
+            certificateType: derivedCertificateType || (client.gstin ? 'GST Certificate' : 'PAN / Incorporation'),
+            applicationDate: new Date(),
+            certificateNumber: client.gstin || client.pan || 'EX-CERTIFIED',
+            status: 'Certificate Received',
+            certificateReceived: 'Yes',
+            movedToBilling: true,
+            remarks: 'Existing Client - Certificate Already Present (Ready for Billing)'
+          });
+        }
+      } catch (certError) {
+        console.error('Certification tracking creation notice:', certError.message);
       }
-    } catch (certError) {
-      console.error('Certification tracking creation notice:', certError.message);
     }
 
     // Initial Ledger Opening Balance record
@@ -247,11 +260,21 @@ exports.updateClient = async (req, res) => {
     if (!updateData.responsibleEmployee) delete updateData.responsibleEmployee;
     if (!updateData.dateOfIncorporation) delete updateData.dateOfIncorporation;
 
-    if (updateData.registrationCategory) {
-      if (updateData.registrationCategory.includes('New Client')) {
+    if (updateData.registrationCategory !== undefined || updateData.noCertification !== undefined) {
+      if (
+        updateData.registrationCategory === 'No Certification' ||
+        (typeof updateData.registrationCategory === 'string' && updateData.registrationCategory.includes('No Certification')) ||
+        updateData.noCertification === 'true' ||
+        updateData.noCertification === true
+      ) {
+        updateData.registrationCategory = 'No Certification';
+        updateData.noCertification = true;
+      } else if (updateData.registrationCategory && updateData.registrationCategory.includes('New Client')) {
         updateData.registrationCategory = 'New Client';
+        updateData.noCertification = false;
       } else {
         updateData.registrationCategory = 'Registered Client';
+        updateData.noCertification = false;
       }
     }
 

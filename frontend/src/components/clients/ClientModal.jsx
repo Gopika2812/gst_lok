@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building, CreditCard, ShieldCheck, Search, CheckCircle2, AlertCircle, PhoneCall, Layers, CheckSquare, Square } from 'lucide-react';
+import { X, Building, CreditCard, ShieldCheck, Search, CheckCircle2, AlertCircle, PhoneCall, Layers, CheckSquare, Square, Zap, FileCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
@@ -120,8 +120,13 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
 
   const handleCategorySwitch = (cat) => {
     setRegistrationCategory(cat);
-    if (cat === 'New Client') {
-      resetModalState();
+    if (cat === 'New Client' || cat === 'No Certification') {
+      if (existingClientId) {
+        setExistingClientId(null);
+        setSearchPhone('');
+        setLookupStatus(null);
+        setLookupResultMsg('');
+      }
     }
   };
 
@@ -273,6 +278,7 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
         }
       });
       data.append('registrationCategory', registrationCategory);
+      data.append('noCertification', registrationCategory === 'No Certification');
       data.append('subscribedServices', JSON.stringify(subscribedServices));
 
       if (files.panDoc) data.append('panDoc', files.panDoc);
@@ -307,7 +313,7 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-base font-bold text-[#0A1E3F]">Client Registration</h3>
-            <p className="text-xs text-slate-500">Add or update client service subscriptions</p>
+            <p className="text-xs text-slate-500">Add or update client service subscriptions & workflow</p>
           </div>
           <button onClick={onClose} className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
             <X className="h-5 w-5" />
@@ -316,31 +322,57 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
 
         {error && <div className="mt-3 rounded-xl bg-rose-50 p-2.5 text-xs font-semibold text-rose-600 border border-rose-200">{error}</div>}
 
-        {/* Clean Option Switcher */}
-        <div className="mt-4 flex rounded-xl bg-slate-100 p-1">
+        {/* Clean Option Switcher with No Certification Option */}
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-1.5 rounded-2xl bg-slate-100 p-1">
           <button
             type="button"
             onClick={() => handleCategorySwitch('New Client')}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
+            className={`flex items-center justify-center space-x-1.5 rounded-xl py-2 px-2 text-xs font-bold transition ${
               registrationCategory === 'New Client'
-                ? 'bg-white text-[#0A1E3F] shadow-xs'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white text-[#0A1E3F] shadow-xs ring-1 ring-slate-200'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            New Client Registration
+            <ShieldCheck className="h-3.5 w-3.5 text-[#C59B27]" />
+            <span>New Client Registration</span>
           </button>
+          
+          <button
+            type="button"
+            onClick={() => handleCategorySwitch('No Certification')}
+            className={`flex items-center justify-center space-x-1.5 rounded-xl py-2 px-2 text-xs font-bold transition ${
+              registrationCategory === 'No Certification'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Zap className="h-3.5 w-3.5" />
+            <span>No Certification (Direct Billing)</span>
+          </button>
+
           <button
             type="button"
             onClick={() => handleCategorySwitch('Registered Client')}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold transition ${
+            className={`flex items-center justify-center space-x-1.5 rounded-xl py-2 px-2 text-xs font-bold transition ${
               registrationCategory === 'Registered Client'
-                ? 'bg-[#C59B27] text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-[#0A1E3F] text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Existing Client (Phone Lookup)
+            <PhoneCall className="h-3.5 w-3.5 text-[#C59B27]" />
+            <span>Existing Client (Lookup)</span>
           </button>
         </div>
+
+        {/* Direct to Billing Mode Banner */}
+        {registrationCategory === 'No Certification' && (
+          <div className="mt-3 p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex items-start space-x-2.5 text-xs text-emerald-900 animate-fadeIn">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Direct to Billing Enabled:</span> This client will bypass the Certification Status & Tracking module entirely. Once registered, they move directly into Active status ready for Billing and regular services.
+            </div>
+          </div>
+        )}
 
         {/* Phone Lookup for Existing Clients */}
         {registrationCategory === 'Registered Client' && (
@@ -415,6 +447,31 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
                   className="mt-1 w-full rounded-xl border border-slate-200 p-2 text-xs outline-none focus:border-[#C59B27]"
                 />
               </div>
+            </div>
+
+            {/* Quick No-Certification Checkbox Option */}
+            <div className="mt-2 p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={registrationCategory === 'No Certification'}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setRegistrationCategory('No Certification');
+                    } else {
+                      setRegistrationCategory('New Client');
+                    }
+                  }}
+                  className="h-4 w-4 rounded accent-emerald-600 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-800">No Certification Required (Direct to Billing)</span>
+                  <p className="text-[10px] text-slate-500">Skip certificate tracking workflow — move client directly to billing & regular services</p>
+                </div>
+              </label>
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${registrationCategory === 'No Certification' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-200 text-slate-600'}`}>
+                {registrationCategory === 'No Certification' ? 'Direct to Billing' : 'Cert Tracking'}
+              </span>
             </div>
           </div>
 
@@ -677,9 +734,19 @@ const ClientModal = ({ isOpen, onClose, onRefresh, employees = [], client = null
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-[#C59B27] px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-[#A68018] transition"
+              className={`rounded-xl px-5 py-2 text-xs font-bold text-white shadow-md transition ${
+                registrationCategory === 'No Certification'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
+                  : 'bg-[#C59B27] hover:bg-[#A68018]'
+              }`}
             >
-              {loading ? 'Saving...' : existingClientId ? 'Update Client' : 'Register Client'}
+              {loading
+                ? 'Saving...'
+                : existingClientId
+                ? 'Update Client'
+                : registrationCategory === 'No Certification'
+                ? 'Register & Move Directly to Billing'
+                : 'Register Client'}
             </button>
           </div>
         </form>

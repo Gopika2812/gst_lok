@@ -139,7 +139,14 @@ const ClientsPage = () => {
                 sortedClients.map((c) => (
                   <tr key={c._id} className="hover:bg-slate-50 transition">
                     <td className="p-3.5">
-                      <p className="font-bold text-slate-800">{c.clientName}</p>
+                      <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                        <p className="font-bold text-slate-800">{c.clientName}</p>
+                        {(c.registrationCategory === 'No Certification' || c.noCertification) && (
+                          <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full">
+                            Direct Billing
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] font-semibold text-[#0A1E3F] bg-slate-100 px-1.5 py-0.5 rounded">
                         {c.clientCode}
                       </span>

@@ -12,7 +12,8 @@ const clientSchema = new mongoose.Schema(
     leadSource: { type: String, default: 'Direct' },
     
     // Registration Mode
-    registrationCategory: { type: String, enum: ['New Client', 'Registered Client'], default: 'Registered Client' },
+    registrationCategory: { type: String, enum: ['New Client', 'Registered Client', 'No Certification'], default: 'Registered Client' },
+    noCertification: { type: Boolean, default: false },
 
     // Business Information
     tradeName: { type: String, trim: true },
